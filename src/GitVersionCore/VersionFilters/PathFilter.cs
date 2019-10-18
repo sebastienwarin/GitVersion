@@ -25,25 +25,28 @@ namespace GitVersion.VersionFilters
 
             reason = null;
 
-            Tree commitTree = version.BaseVersionSource.Tree; // Main Tree
-            Tree parentCommitTree = version.BaseVersionSource.Parents.FirstOrDefault()?.Tree; // Secondary Tree
-            Patch patch = version.Context.Repository.Diff.Compare<Patch>(parentCommitTree, commitTree); // Difference
-            switch (mode)
+            if (version.BaseVersionSource != null)
             {
-                case PathFilterMode.Inclusive:
-                    if (!paths.Any(path => patch.Any(p => p.Path.StartsWith(path, StringComparison.OrdinalIgnoreCase))))
-                    {
-                        reason = "Source was ignored due to commit path is not present";
-                        return true;
-                    }
-                    break;
-                case PathFilterMode.Exclusive:
-                    if (paths.Any(path => patch.All(p => p.Path.StartsWith(path, StringComparison.OrdinalIgnoreCase))))
-                    {
-                        reason = "Source was ignored due to commit path excluded";
-                        return true;
-                    }
-                    break;
+                Tree commitTree = version.BaseVersionSource.Tree; // Main Tree
+                Tree parentCommitTree = version.BaseVersionSource.Parents.FirstOrDefault()?.Tree; // Secondary Tree
+                Patch patch = version.Context.Repository.Diff.Compare<Patch>(parentCommitTree, commitTree); // Difference
+                switch (mode)
+                {
+                    case PathFilterMode.Inclusive:
+                        if (!paths.Any(path => patch.Any(p => p.Path.StartsWith(path, StringComparison.OrdinalIgnoreCase))))
+                        {
+                            reason = "Source was ignored due to commit path is not present";
+                            return true;
+                        }
+                        break;
+                    case PathFilterMode.Exclusive:
+                        if (paths.Any(path => patch.All(p => p.Path.StartsWith(path, StringComparison.OrdinalIgnoreCase))))
+                        {
+                            reason = "Source was ignored due to commit path excluded";
+                            return true;
+                        }
+                        break;
+                }
             }
 
             return false;
