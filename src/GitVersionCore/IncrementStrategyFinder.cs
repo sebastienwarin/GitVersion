@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using GitVersion.Configuration;
@@ -77,7 +77,11 @@ namespace GitVersion
             var patchRegex = context.Configuration.PatchVersionBumpMessage ?? DefaultPatchPattern;
             var none = context.Configuration.NoBumpMessage ?? DefaultNoBumpPattern;
 
+            var pathFilters = context.Configuration.VersionFilters
+                .OfType<VersionFilters.PathFilter>();
+
             var increments = commits
+                .Where(c => !pathFilters.Any(f => f.Exclude(c, context, out _)))
                 .Select(c => GetIncrementFromMessage(c.Message, majorRegex, minorRegex, patchRegex, none))
                 .Where(v => v != null)
                 .Select(v => v.Value)
