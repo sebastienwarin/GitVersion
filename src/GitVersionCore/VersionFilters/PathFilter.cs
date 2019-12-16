@@ -22,6 +22,10 @@ namespace GitVersion.VersionFilters
         public bool Exclude(BaseVersion version, out string reason)
         {
             if (version == null) throw new ArgumentNullException(nameof(version));
+
+            reason = null;
+            if (version.Source.StartsWith("Fallback")) return false;
+
             return Exclude(version.BaseVersionSource, version.Context, out reason);
         }
 
