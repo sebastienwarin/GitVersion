@@ -35,7 +35,7 @@ namespace GitVersion.VersionFilters
 
             reason = null;
 
-            var match = new System.Text.RegularExpressions.Regex($"^({context.Configuration.GitTagPrefix})?.*$",
+            var match = new System.Text.RegularExpressions.Regex($"^({context.Configuration.GitTagPrefix}).*$",
                 System.Text.RegularExpressions.RegexOptions.Compiled);
 
             if (commit != null &&
