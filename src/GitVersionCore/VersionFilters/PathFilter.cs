@@ -24,7 +24,7 @@ namespace GitVersion.VersionFilters
             if (version == null) throw new ArgumentNullException(nameof(version));
 
             reason = null;
-            if (version.Source.StartsWith("Fallback")) return false;
+            if (version.Source.StartsWith("Fallback") || version.Source.StartsWith("NextVersion")) return false;
 
             return Exclude(version.BaseVersionSource, version.Context, out reason);
         }
