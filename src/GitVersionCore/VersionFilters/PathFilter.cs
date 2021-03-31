@@ -8,6 +8,8 @@ namespace GitVersion.VersionFilters
 {
     public class PathFilter : IVersionFilter
     {
+        private readonly static Dictionary<string, Patch> patchsCache = new Dictionary<string, Patch>();
+
         public enum PathFilterMode { Inclusive, Exclusive }
 
         private readonly IEnumerable<string> paths;
@@ -24,7 +26,7 @@ namespace GitVersion.VersionFilters
             if (version == null) throw new ArgumentNullException(nameof(version));
 
             reason = null;
-            if (version.Source.StartsWith("Fallback") || version.Source.StartsWith("NextVersion")) return false;
+            if (version.Source.StartsWith("Fallback") || version.Source.StartsWith("Git tag") || version.Source.StartsWith("NextVersion")) return false;
 
             return Exclude(version.BaseVersionSource, version.Context, out reason);
         }
@@ -38,28 +40,40 @@ namespace GitVersion.VersionFilters
             var match = new System.Text.RegularExpressions.Regex($"^({context.Configuration.GitTagPrefix}).*$",
                 System.Text.RegularExpressions.RegexOptions.Compiled);
 
-            if (commit != null &&
-                !context.Repository.Tags.Any(t => t.Target.Sha == commit.Sha && match.IsMatch(t.FriendlyName)))
+            if (commit != null)
             {
-                Tree commitTree = commit.Tree; // Main Tree
-                Tree parentCommitTree = commit.Parents.FirstOrDefault()?.Tree; // Secondary Tree
-                Patch patch = context.Repository.Diff.Compare<Patch>(parentCommitTree, commitTree); // Difference
-                switch (mode)
+                Patch patch = null;
+                if (!patchsCache.ContainsKey(commit.Sha))
                 {
-                    case PathFilterMode.Inclusive:
-                        if (!paths.Any(path => patch.Any(p => p.Path.StartsWith(path, StringComparison.OrdinalIgnoreCase))))
-                        {
-                            reason = "Source was ignored due to commit path is not present";
-                            return true;
-                        }
-                        break;
-                    case PathFilterMode.Exclusive:
-                        if (paths.Any(path => patch.All(p => p.Path.StartsWith(path, StringComparison.OrdinalIgnoreCase))))
-                        {
-                            reason = "Source was ignored due to commit path excluded";
-                            return true;
-                        }
-                        break;
+                    if (!context.Repository.Tags.Any(t => t.Target.Sha == commit.Sha && match.IsMatch(t.FriendlyName)))
+                    {
+                        Tree commitTree = commit.Tree; // Main Tree
+                        Tree parentCommitTree = commit.Parents.FirstOrDefault()?.Tree; // Secondary Tree
+                        patch = context.Repository.Diff.Compare<Patch>(parentCommitTree, commitTree); // Difference
+                    }
+                    patchsCache[commit.Sha] = patch;
+                }
+
+                patch = patchsCache[commit.Sha];
+                if (patch != null)
+                {
+                    switch (mode)
+                    {
+                        case PathFilterMode.Inclusive:
+                            if (!paths.Any(path => patch.Any(p => p.Path.StartsWith(path, StringComparison.OrdinalIgnoreCase))))
+                            {
+                                reason = "Source was ignored due to commit path is not present";
+                                return true;
+                            }
+                            break;
+                        case PathFilterMode.Exclusive:
+                            if (paths.Any(path => patch.All(p => p.Path.StartsWith(path, StringComparison.OrdinalIgnoreCase))))
+                            {
+                                reason = "Source was ignored due to commit path excluded";
+                                return true;
+                            }
+                            break;
+                    }
                 }
             }
 
